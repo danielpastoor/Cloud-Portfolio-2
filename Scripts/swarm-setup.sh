@@ -12,7 +12,7 @@ VM_PASS="Welkom01"
 # ─────────────────────────────────────────────────────────────
 
 if ! command -v sshpass &>/dev/null; then
-    apt-get install -y sshpass -qq
+    sudo apt-get install -y sshpass -qq
 fi
 
 SSH="sshpass -p $VM_PASS ssh -o StrictHostKeyChecking=no"
