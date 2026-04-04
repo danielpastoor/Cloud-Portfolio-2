@@ -21,57 +21,42 @@ echo "  Centrale Manager Setup"
 echo "  Node1 beheert alle 3 swarms"
 echo "============================================="
 echo ""
-echo ""
 
-echo "Stap 1: Manager-token ophalen van Swarm 2 ($NODE2_IP)..."
-TOKEN_SWARM2=$($SSH ${VM_USER}@${NODE2_IP} "docker swarm join-token manager -q")
-echo "  Token Swarm 2 opgehaald"
-
-echo ""
-echo "Stap 2: Manager-token ophalen van Swarm 3 ($NODE3_IP)..."
-TOKEN_SWARM3=$($SSH ${VM_USER}@${NODE3_IP} "docker swarm join-token manager -q")
-echo "  Token Swarm 3 opgehaald"
-
-echo ""
-echo "Stap 3: Node1 toevoegen als manager aan Swarm 2..."
-
+echo "Stap 1: SSH key aanmaken op node1..."
 $SSH ${VM_USER}@${NODE1_IP} "
-docker context create swarm2 \
-  --docker host=tcp://${NODE2_IP}:2376 2>/dev/null || \
-docker context update swarm2 \
-  --docker host=tcp://${NODE2_IP}:2376
-echo '  Context swarm2 aangemaakt'
+if [ ! -f ~/.ssh/id_ed25519 ]; then
+    ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N '' -q
+    echo '  SSH key aangemaakt'
+else
+    echo '  SSH key al aanwezig'
+fi
 "
-
-$SSH ${VM_USER}@${NODE1_IP} "
-docker context create swarm3 \
-  --docker host=tcp://${NODE3_IP}:2376 2>/dev/null || \
-docker context update swarm3 \
-  --docker host=tcp://${NODE3_IP}:2376
-echo '  Context swarm3 aangemaakt'
-"
-
-echo "  Docker contexts aangemaakt op node1"
+PUBKEY=$($SSH ${VM_USER}@${NODE1_IP} "cat ~/.ssh/id_ed25519.pub")
+echo "  Publieke sleutel opgehaald"
 
 echo ""
-echo "Stap 4: Node1 instellen om alle swarms te beheren via SSH..."
+echo "Stap 2: SSH key toevoegen aan node2 en node3..."
+$SSH ${VM_USER}@${NODE2_IP} "mkdir -p ~/.ssh && echo \"$PUBKEY\" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys"
+echo "  Key toegevoegd aan node2"
+$SSH ${VM_USER}@${NODE3_IP} "mkdir -p ~/.ssh && echo \"$PUBKEY\" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys"
+echo "  Key toegevoegd aan node3"
 
+echo ""
+echo "Stap 3: Docker contexts aanmaken op node1..."
 $SSH ${VM_USER}@${NODE1_IP} "
-# Context voor swarm 1 (lokaal, al standaard)
+docker context rm swarm1-local swarm2-ssh swarm3-ssh 2>/dev/null || true
+
 docker context create swarm1-local \
-  --docker host=unix:///var/run/docker.sock 2>/dev/null || true
-
-# Context voor swarm 2 via SSH
+    --docker host=unix:///var/run/docker.sock
 docker context create swarm2-ssh \
-  --docker host=ssh://${VM_USER}@${NODE2_IP} 2>/dev/null || true
-
-# Context voor swarm 3 via SSH
+    --docker host=ssh://${VM_USER}@${NODE2_IP}
 docker context create swarm3-ssh \
-  --docker host=ssh://${VM_USER}@${NODE3_IP} 2>/dev/null || true
+    --docker host=ssh://${VM_USER}@${NODE3_IP}
 
-echo 'Alle contexts aangemaakt:'
+echo 'Contexts aangemaakt:'
 docker context ls
 "
+echo "  Docker contexts aangemaakt op node1"
 
 echo ""
 echo "============================================="
@@ -80,15 +65,15 @@ echo "============================================="
 
 echo ""
 echo "--- Swarm 1 (lokaal op node1) ---"
-$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm1-local node ls 2>/dev/null || docker node ls"
+$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm1-local node ls"
 
 echo ""
 echo "--- Swarm 2 (via SSH naar node2) ---"
-$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm2-ssh node ls 2>/dev/null || docker node ls"
+$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm2-ssh node ls"
 
 echo ""
 echo "--- Swarm 3 (via SSH naar node3) ---"
-$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm3-ssh node ls 2>/dev/null || docker node ls"
+$SSH ${VM_USER}@${NODE1_IP} "docker --context swarm3-ssh node ls"
 
 echo ""
 echo "============================================="
