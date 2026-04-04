@@ -7,7 +7,7 @@ services:
       - app-netwerk
 
   database:
-    image: mysql:8.0
+    image: mysql:8.0.36
     environment:
       MYSQL_ROOT_PASSWORD: geheim123
       MYSQL_DATABASE: mijnapp
