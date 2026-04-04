@@ -1,0 +1,19 @@
+services:
+  web:
+    image: cloud-portfolio-2:v1 
+    ports:
+      - "8080:80"
+    networks:
+      - app-netwerk
+
+  database:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: geheim123
+      MYSQL_DATABASE: mijnapp
+    networks:
+      - app-netwerk
+
+networks:
+  app-netwerk:
+    driver: bridge
