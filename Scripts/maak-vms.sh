@@ -22,6 +22,10 @@ VM_NAMES=("docker-node1" "docker-node2" "docker-node3")
 
 IMG_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 IMG_FILE="/tmp/ubuntu-24.04-cloud.img"
+SNIPPETS_DIR="/var/lib/vz/snippets"
+USERDATA_FILE="$SNIPPETS_DIR/ssh-enable.yml"
+
+# ─────────────────────────────────────────────────────────────
 
 set -e
 
@@ -29,6 +33,20 @@ echo "============================================="
 echo "  Proxmox VM Setup - 3x Ubuntu 24.04"
 echo "============================================="
 echo ""
+
+mkdir -p "$SNIPPETS_DIR"
+
+echo "Cloud-init user-data aanmaken..."
+cat <<EOF > "$USERDATA_FILE"
+#cloud-config
+ssh_pwauth: true
+package_update: false
+runcmd:
+  - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart ssh
+EOF
+echo "User-data klaar: $USERDATA_FILE"
 
 if [ ! -f "$IMG_FILE" ]; then
     echo "Ubuntu 24.04 cloud image downloaden..."
@@ -95,6 +113,8 @@ for i in 0 1 2; do
         --nameserver $DNS
 
     qm set $VMID --vga std
+
+    qm set $VMID --cicustom "user=local:snippets/ssh-enable.yml"
 
     rm -f "$VM_IMG"
 
