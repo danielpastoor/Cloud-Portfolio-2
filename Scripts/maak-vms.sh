@@ -22,21 +22,20 @@ VM_NAMES=("docker-node1" "docker-node2" "docker-node3")
 
 IMG_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 IMG_FILE="/tmp/ubuntu-24.04-cloud.img"
-# ─────────────────────────────────────────────────────────────
 
 set -e
 
-echo "╔══════════════════════════════════════════════╗"
-echo "║   Proxmox VM Setup — 3x Ubuntu 24.04         ║"
-echo "╚══════════════════════════════════════════════╝"
+echo "============================================="
+echo "  Proxmox VM Setup - 3x Ubuntu 24.04"
+echo "============================================="
 echo ""
 
 if [ ! -f "$IMG_FILE" ]; then
-    echo "► Ubuntu 24.04 cloud image downloaden..."
+    echo "Ubuntu 24.04 cloud image downloaden..."
     wget -q --show-progress "$IMG_URL" -O "$IMG_FILE"
-    echo "✔ Download klaar"
+    echo "Download klaar"
 else
-    echo "✔ Ubuntu image al aanwezig, downloaden overgeslagen"
+    echo "Ubuntu image al aanwezig, downloaden overgeslagen"
 fi
 
 for i in 0 1 2; do
@@ -45,12 +44,12 @@ for i in 0 1 2; do
     VMIP=${VM_IPS[$i]}
 
     echo ""
-    echo "┌─────────────────────────────────────────────"
-    echo "│ Aanmaken: $VMNAME (ID: $VMID, IP: $VMIP)"
-    echo "└─────────────────────────────────────────────"
+    echo "---------------------------------------------"
+    echo "Aanmaken: $VMNAME (ID: $VMID, IP: $VMIP)"
+    echo "---------------------------------------------"
 
     if qm status $VMID &>/dev/null; then
-        echo "  ⚠ VM $VMID bestaat al — wordt verwijderd en opnieuw aangemaakt"
+        echo "  VM $VMID bestaat al - wordt verwijderd en opnieuw aangemaakt"
         qm stop $VMID --skiplock 2>/dev/null || true
         sleep 2
         qm destroy $VMID --purge
@@ -59,7 +58,7 @@ for i in 0 1 2; do
     VM_IMG="/tmp/vm-${VMID}.img"
     cp "$IMG_FILE" "$VM_IMG"
 
-    echo "  → VM aanmaken..."
+    echo "  VM aanmaken..."
     qm create $VMID \
         --name "$VMNAME" \
         --memory $RAM \
@@ -68,7 +67,7 @@ for i in 0 1 2; do
         --ostype l26 \
         --agent enabled=1
 
-    echo "  → Schijf importeren..."
+    echo "  Schijf importeren..."
     qm importdisk $VMID "$VM_IMG" $STORAGE --format qcow2
 
     qm set $VMID \
@@ -77,12 +76,12 @@ for i in 0 1 2; do
         --boot c \
         --bootdisk scsi0
 
-    echo "  → Schijf vergroten naar ${DISK}GB..."
+    echo "  Schijf vergroten naar ${DISK}GB..."
     qm resize $VMID scsi0 ${DISK}G
 
     qm set $VMID --ide2 ${STORAGE}:cloudinit
 
-    echo "  → Cloud-init configureren..."
+    echo "  Cloud-init configureren..."
     qm set $VMID \
         --ciuser "$VM_USER" \
         --cipassword "$VM_PASS" \
@@ -99,24 +98,24 @@ for i in 0 1 2; do
 
     rm -f "$VM_IMG"
 
-    echo "  ✔ $VMNAME aangemaakt"
+    echo "  $VMNAME aangemaakt"
 done
 
 echo ""
-echo "══════════════════════════════════════════════"
+echo "============================================="
 echo " Alle 3 VM's aangemaakt! Nu opstarten..."
-echo "══════════════════════════════════════════════"
+echo "============================================="
 
 for i in 0 1 2; do
     VMID=${VM_IDS[$i]}
     VMNAME=${VM_NAMES[$i]}
-    echo "► $VMNAME (ID: $VMID) opstarten..."
+    echo "$VMNAME (ID: $VMID) opstarten..."
     qm start $VMID
     sleep 5
 done
 
 echo ""
-echo "✔ Alle VM's zijn opgestart!"
+echo "Alle VM's zijn opgestart!"
 echo ""
 echo "Wacht ~60 seconden en test dan de verbinding:"
 echo ""
