@@ -41,6 +41,15 @@ cat <<EOF > "$USERDATA_FILE"
 #cloud-config
 ssh_pwauth: true
 package_update: false
+chpasswd:
+  list: |
+    $VM_USER:$VM_PASS
+  expire: false
+users:
+  - name: $VM_USER
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
 runcmd:
   - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
   - sed -i 's/^#*KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
